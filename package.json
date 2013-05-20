@@ -1,0 +1,39 @@
+{
+  "name": "samp-server",
+  "author": "Oscar Broman <oscar.broman@gmail.com>",
+  "version": "0.1.0",
+  "description": "SA-MP server controller",
+  "preferGlobal": true,
+  "main": "samp-server.js",
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "bin": {
+    
+  },
+  "scripts": {
+    "test": "jshint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/oscar-broman/node-samp-server.git"
+  },
+  "keywords": [
+    "samp",
+    "cli",
+    "server"
+  ],
+  "dependencies": {
+    "async": ">=0.2.8",
+    "funs": ">=0.1.0",
+    "xtend": ">=2.0.4",
+    "waitpid": ">=0.1.1",
+    "temp": ">=0.5.0"
+  },
+  "licenses": [
+    {
+      "type": "MIT +no-false-attribs",
+      "url": "https://github.com/oscar-broman/Prawn/raw/master/LICENSE"
+    }
+  ]
+}
