@@ -16,6 +16,8 @@
   var options = {
     // Path to the wine binary
     winePath: null,
+    // Path to the wineserver binary
+    wineserverPath: null,
     // For OS X, helps Wine find libraries
     dyldFallbackLibraryPath: [
       '/opt/local/lib',
@@ -45,17 +47,42 @@
       fn(null, p);
     };
 
-    startServer = function(fn) {
-      fn(null);
+    startServer = function(killFirst, fn) {
+      if (fn) {
+        fn();
+      }
     };
 
     stopServer = function(fn) {
-      fn(null);
+      if (fn) {
+        fn();
+      }
     };
   } else {
     var initialized, initializing, initCallbacks;
-    var wineVersion, wineBinary, winepathBinary;
+    var wineVersion, wineBinary, winepathBinary, wineserverBinary;
     var pathCache = {};
+    var serverChild = null;
+
+    var versionInfoCommand = function(paths) {
+      var cmd = '', first = true;
+
+      paths.forEach(function(p, i) {
+        if (!p) {
+          return;
+        }
+
+        if (first) {
+          first = false;
+        } else {
+          cmd += '||';
+        }
+
+        cmd += '(which ' + p + ' && (' + p + ' --version 2>&1))';
+      });
+
+      return cmd;
+    };
 
     init = function(fn) {
       if (initialized) {
@@ -75,18 +102,12 @@
         initializing = false;
         initCallbacks = null;
       };
-
-      var cmd;
-
-      if (options.winePath) {
-        cmd = options.winePath + ' --version';
-      } else {
-        cmd = [
-          '(wine.bin --version && which wine.bin)',
-          '(wine --version && which wine)'
-        ].join('||');
-      }
-
+      
+      var cmd = [
+          versionInfoCommand([options.winePath, 'wine.bin', 'wine']),
+          versionInfoCommand([options.wineserverPath, 'wineserver'])
+      ].join('&&');
+      
       childProcess.exec(
         cmd, {
           maxBuffer: 1024,
@@ -96,15 +117,16 @@
 
           var info = stdout.trim().split('\n');
 
-          if (info.length !== 2) {
+          if (info.length !== 4) {
             return fn(new Error(
               'Unexpected output: ' + JSON.stringify(stdout)
             ));
           }
 
-          module.exports.wineVersion = wineVersion = info[0];
-          wineBinary = info[1];
-          winepathBinary = info[1].replace('.bin', '') + 'path';
+          wineBinary = info[0];
+          module.exports.wineVersion = wineVersion = info[1];
+          winepathBinary = info[0].replace('.bin', '') + 'path';
+          wineserverBinary = info[2];
 
           initialized = true;
           fn(null);
@@ -116,20 +138,13 @@
       if (initialized) return;
       if (initializing) throw new Error('initSync can\'t run after init');
 
-      var cmd, outfile;
-
-      outfile = temp.openSync();
-
-      if (options.winePath) {
-        cmd = options.winePath + ' --version';
-      } else {
-        cmd = [
-          '(wine.bin --version && which wine.bin)',
-          '(wine --version && which wine)'
-        ].join('||');
-      }
-
-      cmd = '(' + cmd + ') > ' + outfile.path;
+      var outfile = temp.openSync();
+      var cmd = [
+          versionInfoCommand([options.winePath, 'wine.bin', 'wine']),
+          versionInfoCommand([options.wineserverPath, 'wineserver'])
+      ].join('&&');
+      
+      cmd = '(' + cmd + ') &> ' + outfile.path;
 
       try {
         var child = childProcess.exec(cmd, {
@@ -137,7 +152,11 @@
           timeout: 1000
         });
 
-        var status = waitpid(child.pid);
+        //waitpid doesn't work properly
+        //var status = waitpid(child.pid);
+        var status = {exitCode: 0};
+        var t = new Date();
+        while (new Date() - t < 100) {}
 
         if (status.exitCode !== 0) {
           throw new Error(
@@ -167,13 +186,14 @@
 
       var info = output.split('\n');
 
-      if (info.length !== 2) {
+      if (info.length !== 4) {
         throw new Error('Unexpected output: ' + JSON.stringify(output));
       }
 
-      module.exports.wineVersion = wineVersion = info[0];
-      wineBinary = info[1];
-      winepathBinary = info[1].replace('.bin', '') + 'path';
+      wineBinary = info[0];
+      module.exports.wineVersion = wineVersion = info[1];
+      winepathBinary = info[0].replace('.bin', '') + 'path';
+      wineserverBinary = info[2];
 
       initialized = true;
     };
@@ -267,6 +287,44 @@
         }
       });
     };
+    
+    startServer = function(killFirst, fn) {
+      if (serverChild !== null) {
+        serverChild.kill(9);
+      }
+      
+      if (killFirst) {
+        stopServer(start);
+      } else {
+        start();
+      }
+      
+      function start(err) {
+        if (err) return fn(err);
+        
+        try {
+          serverChild = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
+        } catch (e) {
+          fn(err);
+        }
+        
+        fn(null);
+      }
+    };
+
+    stopServer = function(fn) {
+      try {
+        childProcess.exec(wineserverBinary + ' -k', function(err) {
+          if (err) {
+            fn(err);
+          } else {
+            fn(null);
+          }
+        });
+      } catch (e) {
+        fn(e);
+      }
+    };
   }
 
   // Functions that are the same for win/non-win
@@ -352,6 +410,8 @@
   init = funs('function', init);
   exec = funs('string,object?,function', exec);
   convertPath = funs('string,string|array,function', convertPath);
+  startServer = funs('boolean?,function', startServer);
+  stopServer = funs('function', stopServer);
 
   module.exports = {
     wineVersion: null,
