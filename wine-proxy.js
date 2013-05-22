@@ -27,7 +27,7 @@
   };
 
   // Functions that will be conditionally created
-  var init, initSync, exec, convertPath,
+  var init, initSync, exec, spawn, convertPath,
       startServer, startServerSync, stopServer, stopServerSync;
 
   // Are we on Windows? Create mostly noop functions.
@@ -42,6 +42,10 @@
 
     exec = function(command, opts, fn) {
       return childProcess.exec(command, opts, fn);
+    };
+
+    spawn = function(command, args, opts) {
+      return childProcess.spawn(command, args, opts);
     };
 
     convertPath = function(type, p, fn) {
@@ -209,6 +213,20 @@
       return childProcess.exec(wineBinary + ' ' + command, opts, fn);
     };
 
+    spawn = function(command, args, opts) {
+      if (!initialized) throw new Error('wine-proxy is not initialized');
+
+      opts = extend({
+        env: {
+          DYLD_FALLBACK_LIBRARY_PATH: options.dyldFallbackLibraryPath
+        }
+      }, opts);
+
+      args = [command].concat(args || []);
+
+      return childProcess.spawn(wineBinary, args, opts);
+    };
+
     // TODO: winepath cache
     convertPath = function(toType, p, fn) {
       var paths;
@@ -303,9 +321,9 @@
 
         try {
           var child = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
-          
+
           serverChild = child;
-          
+
           serverChild.on('close', function() {
             if (child.pid === serverChild.pid) {
               serverChild = null;
@@ -325,9 +343,9 @@
       }
 
       var child = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
-      
+
       serverChild = child;
-      
+
       serverChild.on('close', function() {
         if (child.pid === serverChild.pid) {
           serverChild = null;
@@ -339,7 +357,7 @@
       if (!serverChild) {
         return fn(null);
       }
-      
+
       try {
         childProcess.exec(wineserverBinary + ' -k', function(err) {
           if (err && err.code > 1) {
@@ -357,7 +375,7 @@
       if (!serverChild) {
         return;
       }
-      
+
       try {
         var child = childProcess.exec(wineserverBinary + ' -k');
 
@@ -448,6 +466,7 @@
   // Argument processing using funs
   init = funs('function', init);
   exec = funs('string,object?,function', exec);
+  spawn = funs('string,array?,object?', spawn);
   convertPath = funs('string,string|array,function', convertPath);
   startServer = funs('boolean?,function', startServer);
   stopServer = funs('function', stopServer);
@@ -458,6 +477,7 @@
     init: init,
     initSync: initSync,
     exec: exec,
+    spawn: spawn,
     convertPath: convertPath,
     realpathRelaxed: realpathRelaxed,
     startServer: startServer,
