@@ -302,7 +302,15 @@
         if (err) return fn(err);
 
         try {
-          serverChild = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
+          var child = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
+          
+          serverChild = child;
+          
+          serverChild.on('close', function() {
+            if (child.pid === serverChild.pid) {
+              serverChild = null;
+            }
+          });
         } catch (e) {
           fn(err);
         }
@@ -316,10 +324,22 @@
         stopServerSync();
       }
 
-      serverChild = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
+      var child = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
+      
+      serverChild = child;
+      
+      serverChild.on('close', function() {
+        if (child.pid === serverChild.pid) {
+          serverChild = null;
+        }
+      });
     };
 
     stopServer = function(fn) {
+      if (!serverChild) {
+        return fn(null);
+      }
+      
       try {
         childProcess.exec(wineserverBinary + ' -k', function(err) {
           if (err && err.code > 1) {
@@ -334,6 +354,10 @@
     };
 
     stopServerSync = function() {
+      if (!serverChild) {
+        return;
+      }
+      
       try {
         var child = childProcess.exec(wineserverBinary + ' -k');
 
