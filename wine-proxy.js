@@ -27,7 +27,8 @@
   };
 
   // Functions that will be conditionally created
-  var init, initSync, exec, convertPath, startServer, stopServer;
+  var init, initSync, exec, convertPath,
+      startServer, startServerSync, stopServer, stopServerSync;
 
   // Are we on Windows? Create mostly noop functions.
   if (process.platform === 'win32') {
@@ -53,10 +54,18 @@
       }
     };
 
+    startServerSync = function(killFirst) {
+
+    };
+
     stopServer = function(fn) {
       if (fn) {
         fn();
       }
+    };
+
+    stopServerSync = function() {
+
     };
   } else {
     var initialized, initializing, initCallbacks;
@@ -102,12 +111,12 @@
         initializing = false;
         initCallbacks = null;
       };
-      
+
       var cmd = [
           versionInfoCommand([options.winePath, 'wine.bin', 'wine']),
           versionInfoCommand([options.wineserverPath, 'wineserver'])
       ].join('&&');
-      
+
       childProcess.exec(
         cmd, {
           maxBuffer: 1024,
@@ -143,7 +152,7 @@
           versionInfoCommand([options.winePath, 'wine.bin', 'wine']),
           versionInfoCommand([options.wineserverPath, 'wineserver'])
       ].join('&&');
-      
+
       cmd = '(' + cmd + ') &> ' + outfile.path;
 
       try {
@@ -152,17 +161,7 @@
           timeout: 1000
         });
 
-        //waitpid doesn't work properly
-        //var status = waitpid(child.pid);
-        var status = {exitCode: 0};
-        var t = new Date();
-        while (new Date() - t < 100) {}
-
-        if (status.exitCode !== 0) {
-          throw new Error(
-            'Wine version check failed with code ' + status.exitCode
-          );
-        }
+        waitpid(child.pid);
       } catch (e) {
         fs.closeSync(outfile.fd);
         fs.unlinkSync(outfile.path);
@@ -287,43 +286,59 @@
         }
       });
     };
-    
+
     startServer = function(killFirst, fn) {
       if (serverChild !== null) {
-        serverChild.kill(9);
+        killFirst = true;
       }
-      
+
       if (killFirst) {
         stopServer(start);
       } else {
         start();
       }
-      
+
       function start(err) {
         if (err) return fn(err);
-        
+
         try {
           serverChild = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
         } catch (e) {
           fn(err);
         }
-        
+
         fn(null);
       }
+    };
+
+    startServerSync = function(killFirst) {
+      if (killFirst) {
+        stopServerSync();
+      }
+
+      serverChild = childProcess.spawn(wineserverBinary, ['-f', '-p', '-d0']);
     };
 
     stopServer = function(fn) {
       try {
         childProcess.exec(wineserverBinary + ' -k', function(err) {
-          if (err) {
-            fn(err);
-          } else {
-            fn(null);
+          if (err && err.code > 1) {
+            return fn(err);
           }
+
+          fn(null);
         });
       } catch (e) {
         fn(e);
       }
+    };
+
+    stopServerSync = function() {
+      try {
+        var child = childProcess.exec(wineserverBinary + ' -k');
+
+        waitpid(child.pid);
+      } catch (e) {console.log(e)}
     };
   }
 
@@ -422,7 +437,9 @@
     convertPath: convertPath,
     realpathRelaxed: realpathRelaxed,
     startServer: startServer,
+    startServerSync: startServerSync,
     stopServer: stopServer,
+    stopServerSync: stopServerSync,
     isWindowsPath: isWindowsPath
   };
 }());
