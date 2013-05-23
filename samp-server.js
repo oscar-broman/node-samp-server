@@ -103,14 +103,14 @@ Server.prototype.start = function() {
     });
 
     self.child.on('exit', function(code, signal) {
-      if (!self.started) {
+      if (self.starting) {
         self.emit('error', new Error(
           'The server process encountered an error; ' +
           'exit code: ' + code + ', signal: ' + signal,
           'NOSTART'
         ));
-      } else {
-        self.emit('stop', code, signal);
+      } else if (self.started) {
+        self.emit('stop');
       }
     });
 
@@ -142,6 +142,7 @@ Server.prototype.start = function() {
       }
     });
 
+    self.starting = false;
     self.started = true;
   });
 };
@@ -201,6 +202,11 @@ Server.prototype.stop = function(signal) {
 
   if (this.child) {
     this.child.kill(signal);
+
+    this.starting = false;
+    this.started = false;
+
+    this.emit('stop');
   }
 };
 
@@ -273,17 +279,18 @@ Server.prototype.getDefaultCfg = function() {
 };
 
 Server.prototype.readCfg = function(fn) {
+  var self = this;
   var file = path.join(this.cwd, 'server.cfg');
 
   this.cfg = null;
 
   fs.readFile(file, function(err, data) {
-    if (err) return fn.call(this, err);
+    if (err) return fn.call(self, err);
 
     data = data.toString().split('\n');
 
     // Start off with the defaults, as that's how the server behaves
-    var cfg = this.getDefaultCfg();
+    var cfg = self.getDefaultCfg();
 
     for (var i = 0, len = data.length; i < len; i++) {
       var match = data[i].match(reCfgLine);
@@ -303,7 +310,7 @@ Server.prototype.readCfg = function(fn) {
           value = value.split(reSplitSpace);
 
           cfg.gamemodes[n] = {
-            name: path.resolve(this.cwd, value[0]),
+            name: path.resolve(self.cwd, value[0]),
             repeat: +value[1] || 1
           };
 
@@ -326,18 +333,18 @@ Server.prototype.readCfg = function(fn) {
 
     // Resolve the filterscript paths
     cfg.filterscripts.forEach(function(val, i, arr) {
-      arr[i] = path.resolve(this.cwd, val);
-    }.bind(this));
+      arr[i] = path.resolve(self.cwd, val);
+    });
 
     // Clean the gamemodes array from sparse slots
     cfg.gamemodes = cfg.gamemodes.filter(function(val) {
       return val;
     });
 
-    this.cfg = cfg;
+    self.cfg = cfg;
 
-    fn.call(this);
-  }.bind(this));
+    fn.call(self);
+  });
 };
 
 Server.prototype.send = function(command) {
