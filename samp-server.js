@@ -178,7 +178,7 @@ Server.prototype.openLog = function(fn) {
       self.logSize = stats.size;
     }
 
-    fs.open(file, 'r', function(err, fd) {
+    fs.open(file, flags, function(err, fd) {
       if (err) return fn.call(self, err);
 
       self.logFd = fd;
