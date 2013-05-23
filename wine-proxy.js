@@ -5,11 +5,8 @@
   var os = require('os');
   var util = require('util');
   var path = require('path');
-  var async = require('async');
   var fs = require('fs');
   var funs = require('funs');
-  var extend = require('xtend');
-  var temp = require('temp');
 
   var reWindowsPath = /^[a-z]:(\\|\/|$)/i;
   var options = {
@@ -72,7 +69,10 @@
     };
   } else {
     var waitpid = require('waitpid');
-    
+    var async = require('async');
+    var extend = require('xtend');
+    var temp = require('temp');
+
     var initialized, initializing, initCallbacks;
     var wineVersion, wineBinary, winepathBinary, wineserverBinary;
     var pathCache = {};
