@@ -206,7 +206,7 @@ Server.prototype.stop = function(signal) {
 
   if (this.child) {
     this.child.kill(signal);
-    this.child = null;git
+    this.child = null;
 
     this.emit('stop');
   }
