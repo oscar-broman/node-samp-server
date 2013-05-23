@@ -226,28 +226,34 @@ Server.prototype.watchLog = function(fn) {
     },
     listeners: {
       change: function(changeType, file, currentStat, previousStat) {
-        if (path.basename(file).toLowerCase() === 'server_log.txt') {
-          var len = currentStat.size - self.logSize;
-
-          if (len < 0) {
-            self.logSize = currentStat.size;
-          } else if (len > 0) {
-            fs.read(
-              self.logFd,
-              new Buffer(len),
-              0,
-              len,
-              self.logSize,
-              function(err, bytesRead, buffer) {
-                if (err) return self.emit('error', err);
-
-                self.logSize += bytesRead;
-
-                self.emit('output', buffer.toString());
-              }
-            );
-          }
+        if (path.basename(file).toLowerCase() !== 'server_log.txt') {
+          return;
         }
+
+        var len = currentStat.size - self.logSize;
+
+        if (len < 0) {
+          self.logSize = currentStat.size;
+
+          return;
+        } else if (len == 0) {
+          return;
+        }
+
+        fs.read(
+          self.logFd,
+          new Buffer(len),
+          0,
+          len,
+          self.logSize,
+          function(err, bytesRead, buffer) {
+            if (err) return self.emit('error', err);
+
+            self.logSize += bytesRead;
+
+            self.emit('output', buffer.toString());
+          }
+        );
       }
     }
   });
