@@ -145,6 +145,8 @@ Server.prototype.start = function() {
     self.starting = false;
     self.started = true;
   });
+
+  return this;
 };
 
 Server.prototype.openLog = function(fn) {
@@ -183,6 +185,8 @@ Server.prototype.openLog = function(fn) {
       fn.call(self);
     });
   });
+
+  return this;
 };
 
 Server.prototype.stop = function(signal) {
@@ -208,6 +212,8 @@ Server.prototype.stop = function(signal) {
 
     this.emit('stop');
   }
+
+  return this;
 };
 
 Server.prototype.watchLog = function(fn) {
@@ -257,6 +263,8 @@ Server.prototype.watchLog = function(fn) {
       }
     }
   });
+
+  return this;
 };
 
 Server.prototype.getDefaultCfg = function() {
@@ -351,6 +359,8 @@ Server.prototype.readCfg = function(fn) {
 
     fn.call(self);
   });
+
+  return this;
 };
 
 Server.prototype.send = function(command) {
@@ -359,6 +369,8 @@ Server.prototype.send = function(command) {
   } else {
     this.rconQueue.push(command);
   }
+
+  return this;
 };
 
 module.exports = {
