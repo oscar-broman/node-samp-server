@@ -121,7 +121,8 @@ Server.prototype.start = function() {
     self.rconConnection = new RconConnection(
       self.cfg.bind,
       self.cfg.port,
-      self.cfg.rcon_password
+      self.cfg.rcon_password,
+      '0.0.0.0'
     );
 
     self.rconConnection
