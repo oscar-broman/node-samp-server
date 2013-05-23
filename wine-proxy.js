@@ -9,7 +9,6 @@
   var fs = require('fs');
   var funs = require('funs');
   var extend = require('xtend');
-  var waitpid = require('waitpid');
   var temp = require('temp');
 
   var reWindowsPath = /^[a-z]:(\\|\/|$)/i;
@@ -72,6 +71,8 @@
 
     };
   } else {
+    var waitpid = require('waitpid');
+    
     var initialized, initializing, initCallbacks;
     var wineVersion, wineBinary, winepathBinary, wineserverBinary;
     var pathCache = {};
