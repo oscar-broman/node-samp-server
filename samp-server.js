@@ -110,7 +110,7 @@ Server.prototype.start = function() {
           'NOSTART'
         ));
       } else if (self.started) {
-        self.emit('stop');
+        self.stop();
       }
     });
 
@@ -206,12 +206,13 @@ Server.prototype.stop = function(signal) {
 
   if (this.child) {
     this.child.kill(signal);
-
-    this.starting = false;
-    this.started = false;
+    this.child = null;git
 
     this.emit('stop');
   }
+
+  this.starting = false;
+  this.started = false;
 
   return this;
 };
