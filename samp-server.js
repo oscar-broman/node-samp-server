@@ -87,6 +87,7 @@ Server.prototype.start = function() {
   async.series(operations, function(err) {
     if (err) {
       self.starting = false;
+      self.stop('SIGKILL');
       self.emit('error', err);
 
       return;
@@ -107,6 +108,7 @@ Server.prototype.start = function() {
       .on('error', self.emit.bind(self, 'error'))
       .on('exit', function(code, signal) {
         if (self.starting) {
+          self.stop('SIGKILL');
           self.emit('error', new Error(
             'The server process encountered an error; ' +
             'exit code: ' + code + ', signal: ' + signal,
@@ -134,6 +136,7 @@ Server.prototype.start = function() {
 
     self.on('output', function(data) {
       if (data.indexOf('Unable to start server on') !== -1) {
+        self.stop('SIGKILL');
         self.emit('error', new Error(
           'Unable to start the server. Invalid bind IP or port in use?'
         ));
@@ -206,6 +209,7 @@ Server.prototype.tailLog = function(fn) {
     .on('error', this.emit.bind(this, 'error'))
     .on('end', function() {
       if (this.starting || this.started) {
+        self.stop('SIGKILL');
         this.emit('error', new Error('Log tail ended unexpectedly'));
       }
     }.bind(this));
