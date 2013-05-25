@@ -10,7 +10,7 @@ var events = require('events');
 var wineProxy = require('./wine-proxy');
 var RconConnection = require('samp-rcon');
 var async = require('async');
-var watchr = require('watchr');
+var Tail = require('tailnative');
 
 wineProxy.initSync();
 
@@ -49,11 +49,15 @@ var Server = function SampServer(opts) {
   this.binary = path.resolve(opts.binary);
   this.started = false;
   this.starting = false;
-  this.rcon = null;
   this.cfg = null;
-  this.logFd = null;
   this.rconConnection = null;
-  this.rconQueue = [];
+  this.commandQueue = [];
+
+  if (!useLinuxBinary || reIsWindowsBinary.test(this.binary)) {
+    this.windowsBinary = true;
+  } else {
+    this.windowsBinary = false;
+  }
 
   if (opts.cwd) {
     this.cwd = path.resolve(opts.cwd);
@@ -77,8 +81,8 @@ Server.prototype.start = function() {
   activeServers.push(this);
 
   var operations = [this.readCfg.bind(this),
-                    this.openLog.bind(this),
-                    this.watchLog.bind(this)];
+                    this.touchLog.bind(this),
+                    this.tailLog.bind(this)];
 
   async.series(operations, function(err) {
     if (err) {
@@ -89,30 +93,29 @@ Server.prototype.start = function() {
     }
 
     var opts = {
-      cwd: self.cwd
+      cwd: self.cwd,
+      stdio: 'ignore'
     };
 
-    if (useLinuxBinary && !reIsWindowsBinary.test(self.binary)) {
-      self.child = childProcess.spawn(self.binary, opts);
-    } else {
+    if (self.windowsBinary) {
       self.child = wineProxy.spawn(self.binary, opts);
+    } else {
+      self.child = childProcess.spawn(self.binary, opts);
     }
 
-    self.child.on('error', function(err) {
-      self.emit('error', err);
-    });
-
-    self.child.on('exit', function(code, signal) {
-      if (self.starting) {
-        self.emit('error', new Error(
-          'The server process encountered an error; ' +
-          'exit code: ' + code + ', signal: ' + signal,
-          'NOSTART'
-        ));
-      } else if (self.started) {
-        self.stop();
-      }
-    });
+    self.child
+      .on('error', self.emit.bind(self, 'error'))
+      .on('exit', function(code, signal) {
+        if (self.starting) {
+          self.emit('error', new Error(
+            'The server process encountered an error; ' +
+            'exit code: ' + code + ', signal: ' + signal,
+            'NOSTART'
+          ));
+        } else if (self.started) {
+          self.stop();
+        }
+      });
 
     if (self.rconConnection) {
       self.rconConnection.close();
@@ -126,20 +129,16 @@ Server.prototype.start = function() {
     );
 
     self.rconConnection
-      .on('error', self.emit.bind(self))
-      .on('ready', function() {
-        var command;
-
-        while ((command = self.rconQueue.pop())) {
-          self.send(command);
-        }
-      });
+      .on('error', self.emit.bind(self, 'error'))
+      .on('ready', self.flushCommandQueue.bind(self));
 
     self.on('output', function(data) {
       if (data.indexOf('Unable to start server on') !== -1) {
         self.emit('error', new Error(
           'Unable to start the server. Invalid bind IP or port in use?'
         ));
+        
+        self.stop();
       }
     });
 
@@ -150,40 +149,25 @@ Server.prototype.start = function() {
   return this;
 };
 
-Server.prototype.openLog = function(fn) {
+Server.prototype.touchLog = function(fn) {
   var self = this;
   var file = path.join(this.cwd, 'server_log.txt');
-
-  if (this.logFd !== null) {
-    try {
-      fs.closeSync(this.logFd);
-    } catch (e) {
-      return fn(e);
-    }
-
-    this.logFd = null;
-  }
 
   fs.stat(file, function(err, stats) {
     var flags = 'r';
 
     if (err) {
       if (err.code === 'ENOENT') {
-        self.logSize = 0;
         flags = 'a+';
       } else {
         return fn.call(self, err);
       }
-    } else {
-      self.logSize = stats.size;
     }
 
     fs.open(file, flags, function(err, fd) {
       if (err) return fn.call(self, err);
 
-      self.logFd = fd;
-
-      fn.call(self);
+      fs.close(fd, fn.bind(self));
     });
   });
 
@@ -191,18 +175,13 @@ Server.prototype.openLog = function(fn) {
 };
 
 Server.prototype.stop = function(signal) {
-  if (this.logWatcher) {
-    this.logWatcher.close();
+  this.starting = false;
+  this.started = false;
 
-    this.logWatcher = null;
-  }
+  if (this.logTail) {
+    this.logTail.close();
 
-  if (this.logFd !== null) {
-    try {
-      fs.closeSync(this.logFd);
-    } catch (e) {}
-
-    this.logFd = null;
+    this.logTail = null;
   }
 
   if (this.child) {
@@ -212,59 +191,26 @@ Server.prototype.stop = function(signal) {
     this.emit('stop');
   }
 
-  this.starting = false;
-  this.started = false;
-
   return this;
 };
 
-Server.prototype.watchLog = function(fn) {
-  var self = this;
-
-  if (this.logWatcher) {
-    this.logWatcher.close();
+Server.prototype.tailLog = function(fn) {
+  if (this.logTail) {
+    this.logTail.close();
   }
 
-  this.logWatcher = watchr.watch({
-    path: this.cwd,
-    next: function(err, watcherInstance) {
-      if (err) return fn.call(self, err);
+  this.logTail = new Tail(path.join(this.cwd, 'server_log.txt'));
 
-      fn.call(self);
-    },
-    listeners: {
-      change: function(changeType, file, currentStat, previousStat) {
-        if (path.basename(file).toLowerCase() !== 'server_log.txt') {
-          return;
-        }
-
-        var len = currentStat.size - self.logSize;
-
-        if (len < 0) {
-          self.logSize = currentStat.size;
-
-          return;
-        } else if (len == 0) {
-          return;
-        }
-
-        fs.read(
-          self.logFd,
-          new Buffer(len),
-          0,
-          len,
-          self.logSize,
-          function(err, bytesRead, buffer) {
-            if (err) return self.emit('error', err);
-
-            self.logSize += bytesRead;
-
-            self.emit('output', buffer.toString());
-          }
-        );
+  this.logTail
+    .on('data', this.emit.bind(this, 'output'))
+    .on('error', this.emit.bind(this, 'error'))
+    .on('end', function() {
+      if (this.starting || this.started) {
+        this.emit('error', new Error('Log tail ended unexpectedly'));
       }
-    }
-  });
+    }.bind(this));
+
+  fn();
 
   return this;
 };
@@ -369,10 +315,18 @@ Server.prototype.send = function(command) {
   if (this.rconConnection && this.rconConnection.ready) {
     this.rconConnection.send(command);
   } else {
-    this.rconQueue.push(command);
+    this.commandQueue.push(command);
   }
 
   return this;
+};
+
+Server.prototype.flushCommandQueue = function() {
+  var command;
+
+  while ((command = this.commandQueue.pop())) {
+    this.send(command);
+  }
 };
 
 module.exports = {
