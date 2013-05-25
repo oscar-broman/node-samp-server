@@ -156,8 +156,6 @@ Server.prototype.start = function() {
         self.emit('error', new Error(
           'Unable to start the server. Invalid bind IP or port in use?'
         ));
-
-        self.stop();
       }
     });
 
