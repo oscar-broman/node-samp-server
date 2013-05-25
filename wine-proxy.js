@@ -118,8 +118,8 @@
       };
 
       var cmd = [
-          versionInfoCommand([options.winePath, 'wine.bin', 'wine']),
-          versionInfoCommand([options.wineserverPath, 'wineserver'])
+        versionInfoCommand([options.winePath, 'wine.bin', 'wine']),
+        versionInfoCommand([options.wineserverPath, 'wineserver'])
       ].join('&&');
 
       childProcess.exec(
@@ -154,8 +154,8 @@
 
       var outfile = temp.openSync();
       var cmd = [
-          versionInfoCommand([options.winePath, 'wine.bin', 'wine']),
-          versionInfoCommand([options.wineserverPath, 'wineserver'])
+        versionInfoCommand([options.winePath, 'wine.bin', 'wine']),
+        versionInfoCommand([options.wineserverPath, 'wineserver'])
       ].join('&&');
 
       cmd = '(' + cmd + ') &> ' + outfile.path;
@@ -381,7 +381,7 @@
         var child = childProcess.exec(wineserverBinary + ' -k');
 
         waitpid(child.pid);
-      } catch (e) {console.log(e)}
+      } catch (e) {}
     };
   }
 
