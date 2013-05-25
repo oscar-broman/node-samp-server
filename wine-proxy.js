@@ -109,11 +109,12 @@
       initCallbacks = [fn];
 
       fn = function(err) {
+        initializing = false;
+
         for (var i = 0; i < initCallbacks.length; i++) {
           initCallbacks[i](err);
         }
 
-        initializing = false;
         initCallbacks = null;
       };
 
