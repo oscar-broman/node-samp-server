@@ -80,7 +80,7 @@ Server.prototype.start = function() {
                     this.openLog.bind(this),
                     this.watchLog.bind(this)];
 
-  async.parallel(operations, function(err) {
+  async.series(operations, function(err) {
     if (err) {
       self.starting = false;
       self.emit('error', err);
