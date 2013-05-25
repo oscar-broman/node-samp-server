@@ -10,8 +10,7 @@
   },
   "scripts": {
     "test": "jshint .",
-    "preinstall": "node scripts/install.js",
-    "postinstall": "node scripts/install.js"
+    "install": "node scripts/install.js"
   },
   "repository": {
     "type": "git",
@@ -22,7 +21,7 @@
     "cli",
     "server"
   ],
-  "dependencies": {
+  "dependencies_all": {
     "async": ">=0.2.8",
     "funs": ">=0.1.0",
     "xtend": ">=2.0.4",
@@ -31,7 +30,7 @@
     "samp-rcon": ">=0.1.1",
     "tailnative": ">=0.3.2"
   },
-  "dependencies-win32": {
+  "dependencies_win32": {
     "waitpid": null,
     "temp": null,
     "samp-rcon": null,

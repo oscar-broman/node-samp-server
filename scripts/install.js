@@ -2,41 +2,45 @@
 
 var fs = require('fs');
 var path = require('path');
+var childProcess = require('child_process');
 
 process.chdir(path.resolve(__dirname, '..'));
 
-if (fs.existsSync('package.original.json')) {
-  try {
-    fs.unlinkSync('package.json');
-  } catch (e) {}
-
-  fs.renameSync('package.original.json', 'package.json');
-}
-
-if (process.env.npm_lifecycle_event === 'postinstall') {
-  process.exit();
-}
-
 var pkg = fs.readFileSync('package.json');
-var deps = 'dependencies-' + process.platform;
+var deps = 'dependencies_' + process.platform;
 
 pkg = JSON.parse(pkg.toString());
 
 if (pkg[deps]) {
   for (var module in pkg[deps]) {
     if (pkg[deps][module]) {
-      pkg.dependencies[module] = pkg[deps][module];
+      pkg['dependencies_all'][module] = pkg[deps][module];
     } else {
-      delete pkg.dependencies[module];
+      delete pkg['dependencies_all'][module];
     }
   }
 }
 
-for (var key in pkg) {
-  if (/^dependencies-/.test(key)) {
-    delete pkg[key];
-  }
+var deps = [];
+
+for (var module in pkg['dependencies_all']) {
+  deps.push(module + '@"' + pkg['dependencies_all'][module] + '"');
 }
 
-fs.renameSync('package.json', 'package.original.json');
-fs.writeFileSync('package.json', JSON.stringify(pkg, null, '  '));
+installStep();
+
+function installStep(err) {
+  if (err) throw err;
+
+  var dep = deps.pop();
+
+  if (!dep) {
+    return;
+  }
+
+  console.log('Installing ' + dep);
+
+  childProcess.exec('npm install ' + dep, {
+    stdio: ['ignore', process.stdout, process.stderr]
+  }, installStep);
+}
