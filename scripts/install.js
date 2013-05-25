@@ -1,3 +1,5 @@
+/* jshint camelcase:false */
+
 'use strict';
 
 var fs = require('fs');
@@ -12,19 +14,19 @@ var deps = 'dependencies_' + process.platform;
 pkg = JSON.parse(pkg.toString());
 
 if (pkg[deps]) {
-  for (var module in pkg[deps]) {
-    if (pkg[deps][module]) {
-      pkg['dependencies_all'][module] = pkg[deps][module];
+  for (var m in pkg[deps]) {
+    if (pkg[deps][m]) {
+      pkg.dependencies_all[m] = pkg[deps][m];
     } else {
-      delete pkg['dependencies_all'][module];
+      delete pkg.dependencies_all[m];
     }
   }
 }
 
 var deps = [];
 
-for (var module in pkg['dependencies_all']) {
-  deps.push(module + '@"' + pkg['dependencies_all'][module] + '"');
+for (var m in pkg.dependencies_all) {
+  deps.push(m + '@"' + pkg.dependencies_all[m] + '"');
 }
 
 installStep();

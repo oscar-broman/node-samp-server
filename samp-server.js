@@ -142,7 +142,7 @@ Server.prototype.start = function() {
         self.emit('error', new Error(
           'Unable to start the server. Invalid bind IP or port in use?'
         ));
-        
+
         self.stop();
       }
     });
@@ -211,7 +211,7 @@ Server.prototype.tailLog = function(fn) {
     .on('error', this.emit.bind(this, 'error'))
     .on('end', function() {
       if (this.starting || this.started) {
-        self.stop('SIGKILL');
+        this.stop('SIGKILL');
         this.emit('error', new Error('Log tail ended unexpectedly'));
       }
     }.bind(this));
