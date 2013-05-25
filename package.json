@@ -27,7 +27,7 @@
     "xtend": ">=2.0.4",
     "waitpid": ">=0.1.1",
     "temp": ">=0.5.0",
-    "samp-rcon": ">=0.1.1",
+    "samp-rcon": ">=0.1.2",
     "tailnative": ">=0.3.2"
   },
   "dependencies_win32": {
