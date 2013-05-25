@@ -8,11 +8,16 @@ var util = require('util');
 var childProcess = require('child_process');
 var events = require('events');
 var wineProxy = require('./wine-proxy');
-var RconConnection = require('samp-rcon');
 var async = require('async');
-var Tail = require('tailnative');
 
 var isWindows = (process.platform === 'win32');
+var RconConnection, Tail;
+
+if (!isWindows) {
+  RconConnection = require('samp-rcon');
+  Tail = require('tailnative');
+}
+
 var useLinuxBinary = (!isWindows && process.platform !== 'darwin');
 var activeServers = [];
 var reSplitSpace = /\s+/;
@@ -78,9 +83,12 @@ Server.prototype.start = function() {
 
   activeServers.push(this);
 
-  var operations = [this.readCfg.bind(this),
-                    this.touchLog.bind(this),
-                    this.tailLog.bind(this)];
+  var operations = [this.readCfg.bind(this)];
+
+  if (!isWindows) {
+    operations.push(this.touchLog.bind(this),
+                    this.tailLog.bind(this));
+  }
 
   if (this.windowsBinary && !wineProxy.isInitialized) {
     operations.unshift(wineProxy.init);
@@ -97,7 +105,7 @@ Server.prototype.start = function() {
 
     var opts = {
       cwd: self.cwd,
-      stdio: 'ignore'
+      stdio: isWindows ? 'pipe' : 'ignore'
     };
 
     if (self.windowsBinary) {
@@ -121,20 +129,26 @@ Server.prototype.start = function() {
         }
       });
 
-    if (self.rconConnection) {
-      self.rconConnection.close();
+    if (isWindows) {
+      self.child.stdout.on('data', function(data) {
+        self.emit('output', data.toString());
+      });
+    } else {
+      if (self.rconConnection) {
+        self.rconConnection.close();
+      }
+
+      self.rconConnection = new RconConnection(
+        self.cfg.bind,
+        self.cfg.port,
+        self.cfg.rcon_password,
+        '0.0.0.0'
+      );
+
+      self.rconConnection
+        .on('error', self.emit.bind(self, 'error'))
+        .on('ready', self.flushCommandQueue.bind(self));
     }
-
-    self.rconConnection = new RconConnection(
-      self.cfg.bind,
-      self.cfg.port,
-      self.cfg.rcon_password,
-      '0.0.0.0'
-    );
-
-    self.rconConnection
-      .on('error', self.emit.bind(self, 'error'))
-      .on('ready', self.flushCommandQueue.bind(self));
 
     self.on('output', function(data) {
       if (data.indexOf('Unable to start server on') !== -1) {
@@ -318,10 +332,18 @@ Server.prototype.readCfg = function(fn) {
 };
 
 Server.prototype.send = function(command) {
-  if (this.rconConnection && this.rconConnection.ready) {
-    this.rconConnection.send(command);
+  if (isWindows) {
+    if (this.child) {
+      this.child.stdin.write(command);
+    } else {
+      this.commandQueue.push(command);
+    }
   } else {
-    this.commandQueue.push(command);
+    if (this.rconConnection && this.rconConnection.ready) {
+      this.rconConnection.send(command);
+    } else {
+      this.commandQueue.push(command);
+    }
   }
 
   return this;
