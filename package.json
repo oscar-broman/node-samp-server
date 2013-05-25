@@ -8,11 +8,10 @@
   "engines": {
     "node": ">=0.10.0"
   },
-  "bin": {
-    
-  },
   "scripts": {
-    "test": "jshint ."
+    "test": "jshint .",
+    "preinstall": "node scripts/install.js",
+    "postinstall": "node scripts/install.js"
   },
   "repository": {
     "type": "git",
@@ -31,6 +30,12 @@
     "temp": ">=0.5.0",
     "samp-rcon": ">=0.1.1",
     "tailnative": ">=0.3.2"
+  },
+  "dependencies-win32": {
+    "waitpid": null,
+    "temp": null,
+    "samp-rcon": null,
+    "tailnative": null
   },
   "licenses": [
     {
