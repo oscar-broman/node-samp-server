@@ -144,6 +144,7 @@
           wineserverBinary = info[2];
 
           initialized = true;
+          exports.isInitialized = true;
           fn(null);
         }
       );
@@ -200,6 +201,7 @@
       winepathBinary = info[0].replace('.bin', '') + 'path';
       wineserverBinary = info[2];
 
+      exports.isInitialized = true;
       initialized = true;
     };
 
@@ -473,7 +475,8 @@
   startServer = funs('boolean?,function', startServer);
   stopServer = funs('function', stopServer);
 
-  module.exports = {
+  module.exports = exports = {
+    isInitialized: false,
     wineVersion: null,
     option: option,
     init: init,
