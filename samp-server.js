@@ -105,7 +105,10 @@ Server.prototype.start = function() {
 
     var opts = {
       cwd: self.cwd,
-      stdio: isWindows ? 'pipe' : 'ignore'
+      stdio: isWindows ? 'pipe' : 'ignore',
+      env: {
+        DISPLAY: ''
+      }
     };
 
     if (self.windowsBinary) {
