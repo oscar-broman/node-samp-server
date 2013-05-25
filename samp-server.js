@@ -100,7 +100,7 @@ Server.prototype.start = function() {
     if (self.windowsBinary) {
       self.child = wineProxy.spawn(self.binary, opts);
     } else {
-      self.child = childProcess.spawn(self.binary, opts);
+      self.child = childProcess.spawn(self.binary, [], opts);
     }
 
     self.child
