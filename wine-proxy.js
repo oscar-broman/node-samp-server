@@ -37,11 +37,11 @@
     };
 
     exec = function(command, opts, fn) {
-      return childProcess.exec(command, opts, fn);
+      return childProcess.exec(command, opts || {}, fn);
     };
 
     spawn = function(command, args, opts) {
-      return childProcess.spawn(command, args, opts);
+      return childProcess.spawn(command, args || [], opts || {});
     };
 
     convertPath = function(type, p, fn) {
