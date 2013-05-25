@@ -21,7 +21,7 @@ function shutdown(event) {
 }
 
 var server = new sampServer.Server({
-  binary: path.resolve('testing', 'server', 'samp-server.exe')
+  binary: path.resolve('test', 'server', 'samp-server.exe')
 });
 
 server
