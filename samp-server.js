@@ -12,8 +12,6 @@ var RconConnection = require('samp-rcon');
 var async = require('async');
 var Tail = require('tailnative');
 
-wineProxy.initSync();
-
 var isWindows = (process.platform === 'win32');
 var useLinuxBinary = (!isWindows && process.platform !== 'darwin');
 var activeServers = [];
@@ -83,6 +81,10 @@ Server.prototype.start = function() {
   var operations = [this.readCfg.bind(this),
                     this.touchLog.bind(this),
                     this.tailLog.bind(this)];
+
+  if (this.windowsBinary && !wineProxy.isInitialized) {
+    operations.unshift(wineProxy.init);
+  }
 
   async.series(operations, function(err) {
     if (err) {
