@@ -13,15 +13,16 @@ var sampServer = require('../samp-server');
 
 function shutdown(event) {
   if (event === 'exit') {
-    sampServer.closeAll();
+    sampServer.closeAllSync();
   } else {
-    sampServer.closeAll('SIGKILL');
+    sampServer.closeAllSync('SIGKILL');
   }
 }
 
 sampServer.tempServer(
   path.resolve('test', 'server', 'gamemodes', 'test.amx'), {
-    binary: path.resolve('test', 'server', 'samp-server.exe')
+    binary: path.resolve('test', 'server', 'samp-server.exe'),
+    port: 7777
   }, function(err, server) {
     if (err) throw err;
 

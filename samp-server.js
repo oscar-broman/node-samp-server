@@ -34,7 +34,7 @@ var cfgNumberKeys = [
   'stream_rate', 'maxnpc'
 ];
 
-function closeAll(signal) {
+function closeAll(signal, sync) {
   if (signal === undefined) {
     signal = 'SIGTERM';
   }
@@ -42,8 +42,12 @@ function closeAll(signal) {
   var server;
 
   while ((server = activeServers.pop())) {
-    server.stop(signal);
+    server.stop(signal, sync);
   }
+}
+
+function closeAllSync(signal) {
+  closeAll(signal, true);
 }
 
 function tempServer(amx, opts, fn) {
