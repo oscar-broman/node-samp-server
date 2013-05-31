@@ -390,7 +390,7 @@ Server.prototype.stop = function(signal, sync) {
   if (this.stopping) {
     return;
   }
-  
+
   var operations = [];
   var self = this;
 
@@ -408,7 +408,7 @@ Server.prototype.stop = function(signal, sync) {
     this.child.kill(signal);
     this.child = null;
   }
-  
+
   if (this.temporary) {
     if (sync) {
       try {
@@ -418,7 +418,7 @@ Server.prototype.stop = function(signal, sync) {
       operations.push(rimraf.bind(null, this.cwd));
     }
   }
-  
+
   if (sync) {
     this.emit('stop');
   } else {
@@ -428,7 +428,7 @@ Server.prototype.stop = function(signal, sync) {
       self.emit('stop');
     });
   }
-  
+
   return this;
 };
 

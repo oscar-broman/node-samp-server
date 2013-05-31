@@ -33,7 +33,7 @@ server
   })
   .on('stop', function() {
     console.log('The server stopped');
-    
+
     process.exit();
   })
   .start()
