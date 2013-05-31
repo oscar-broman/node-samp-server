@@ -13,7 +13,8 @@
     "postinstall": "node scripts/post-install.js"
   },
   "bin": {
-    "run-amx": "./bin/run-amx.js"
+    "run-amx": "./bin/run-amx.js",
+    "run-samp-server": "./bin/run-samp-server.js"
   },
   "repository": {
     "type": "git",

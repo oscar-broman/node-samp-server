@@ -32,7 +32,7 @@ function installStep(err) {
   if (!dep) {
     return;
   }
-  
+
   dep += '@"' + deps[dep] + '"';
 
   console.log('Installing ' + dep);
