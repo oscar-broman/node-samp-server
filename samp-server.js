@@ -69,7 +69,7 @@ function tempServer(amx, opts, fn) {
   cfg.rcon_password = null;
   cfg.port = null;
   cfg.gamemodes = [{
-    name: '../gm',
+    name: 'gm',
     repeat: 1
   }];
 
@@ -106,29 +106,34 @@ function tempServer(amx, opts, fn) {
       amxData = results.amxRead;
     }
 
-    fs.writeFile(
-      path.join(results.tempDir, 'gm.amx'),
-      amxData,
-      function(err) {
-        if (err) return fn(err);
+    var amxPath = path.join(results.tempDir, 'gamemodes', 'gm.amx');
+    var cfgPath = path.join(results.tempDir, 'server.cfg');
+    var cfgString = buildCfg(cfg, results.tempDir);
 
-        fs.writeFile(
-          path.join(results.tempDir, 'server.cfg'),
-          buildCfg(cfg, results.tempDir),
-          function(err) {
-            if (err) return fn(err);
+    var operations = [
+      fs.mkdir.bind(null, path.join(results.tempDir, 'gamemodes')),
+      fs.mkdir.bind(null, path.join(results.tempDir, 'scriptfiles')),
+      fs.writeFile.bind(null, amxPath, amxData),
+      fs.writeFile.bind(null, cfgString)
+    ];
 
-            var server = new Server({
-              binary: opts.binary,
-              cwd: results.tempDir,
-              temporary: true
-            });
+    async.series(operations, function(err) {
+      if (err) {
+        rimraf(results.tempDir, function() {
+          fn(err);
+        });
 
-            fn(null, server);
-          }
-        );
+        return;
       }
-    );
+
+      var server = new Server({
+        binary: opts.binary,
+        cwd: results.tempDir,
+        temporary: true
+      });
+
+      fn(null, server);
+    });
   });
 }
 
