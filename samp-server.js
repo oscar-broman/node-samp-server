@@ -9,6 +9,10 @@ var childProcess = require('child_process');
 var events = require('events');
 var wineProxy = require('./wine-proxy');
 var async = require('async');
+var net = require('net');
+var temp = require('temp');
+var extend = require('xtend');
+var rimraf = require('rimraf');
 
 var isWindows = (process.platform === 'win32');
 var RconConnection, Tail;
@@ -42,6 +46,193 @@ function closeAll(signal) {
   }
 }
 
+function tempServer(amx, opts, fn) {
+  if (typeof opts !== 'object' || !opts.binary) {
+    throw new Error('Server binary not specified');
+  }
+
+  if (opts.plugins && !util.isArray(opts.plugins)) {
+    throw new TypeError('"plugins" should be an array');
+  }
+
+  var cfg = getDefaultCfg();
+  var operations = {
+    tempDir: temp.mkdir.bind(null, 'samp-')
+  };
+
+  cfg.query = 0;
+  cfg.announce = 0;
+  cfg.rcon_password = null;
+  cfg.port = null;
+  cfg.gamemodes = [{
+    name: '../gm',
+    repeat: 1
+  }];
+
+  var amxData = null;
+
+  if (amx instanceof Buffer) {
+    amxData = amx;
+  } else {
+    operations.amxRead = fs.readFile.bind(null, amx);
+  }
+
+  for (var key in opts) {
+    if (cfg.hasOwnProperty(key)) {
+      cfg[key] = opts[key];
+    }
+  }
+
+  if (!cfg.rcon_password) {
+    cfg.rcon_password = Math.random().toString(36).substring(2, 12);
+  }
+
+  if (cfg.port === null) {
+    operations.freePort = getFreePort;
+  }
+
+  async.series(operations, function(err, results) {
+    if (err) return fn(err);
+
+    if (results.freePort) {
+      cfg.port = results.freePort;
+    }
+
+    if (results.amxRead) {
+      amxData = results.amxRead;
+    }
+
+    fs.writeFile(
+      path.join(results.tempDir, 'gm.amx'),
+      amxData,
+      function(err) {
+        if (err) return fn(err);
+
+        fs.writeFile(
+          path.join(results.tempDir, 'server.cfg'),
+          buildCfg(cfg, results.tempDir),
+          function(err) {
+            if (err) return fn(err);
+
+            var server = new Server({
+              binary: opts.binary,
+              cwd: results.tempDir,
+              temporary: true
+            });
+
+            fn(null, server);
+          }
+        );
+      }
+    );
+  });
+}
+
+function getFreePort(fn) {
+  var server = net.createServer();
+  var calledFn = false;
+
+  server.on('error', function(err) {
+    server.close();
+
+    if (!calledFn) {
+      calledFn = true;
+      fn(err);
+    }
+  });
+
+  server.listen(0, function() {
+    var port = server.address().port;
+
+    server.close();
+
+    if (!calledFn) {
+      calledFn = true;
+
+      if (!port) {
+        fn(new Error('Unable to get the server\'s given port'));
+      } else {
+        fn(null, port);
+      }
+    }
+  });
+}
+
+function getDefaultCfg() {
+  return {
+    lanmode: 0,
+    rcon_password: 'changeme',
+    maxplayers: 50,
+    port: 7777,
+    hostname: 'SA-MP 0.3 Server',
+    gamemodes: [],
+    filterscripts: [],
+    announce: 0,
+    query: 1,
+    chatlogging: 0,
+    weburl: 'www.sa-mp.com',
+    onfoot_rate: 40,
+    incar_rate: 40,
+    weapon_rate: 40,
+    stream_distance: 300.0,
+    stream_rate: 1000,
+    maxnpc: 0,
+    logtimeformat: '[%H:%M:%S]',
+    bind: '0.0.0.0',
+    plugins: []
+  };
+}
+
+function buildCfg(cfg, dir) {
+  var output = '';
+  var gamemodes = path.resolve(dir, 'gamemodes');
+  var filterscripts = path.resolve(dir, 'filterscripts');
+  var plugins = path.resolve(dir, 'plugins');
+
+  function relativePath(d, p) {
+    p = path.resolve(d, p);
+
+    return path.relative(d, p);
+  }
+
+  function putGamemode(gm) {
+    output += 'gamemode' + idx + ' ';
+    idx += 1;
+
+    if (typeof gm === 'string') {
+      output += relativePath(gamemodes, gm) + ' 1';
+    } else {
+      output += relativePath(gamemodes, gm.name) + ' ' + gm.repeat;
+    }
+
+    output += '\n';
+  }
+
+  for (var key in cfg) {
+    if (!cfg.hasOwnProperty(key)) {
+      continue;
+    }
+
+    if (key === 'plugins') {
+      output += 'plugins ';
+      output += cfg[key].map(relativePath.bind(null, plugins)).join(' ');
+      output += '\n';
+    } else if (key === 'filterscripts') {
+      output += 'filterscripts ';
+      output += cfg[key].map(relativePath.bind(null, filterscripts)).join(' ');
+      output += '\n';
+    } else if (key === 'gamemodes') {
+      var idx = 0;
+
+      cfg[key].forEach(putGamemode);
+    } else {
+      output += key + ' ' + cfg[key] + '\n';
+    }
+  }
+
+  return output;
+}
+
 var Server = function SampServer(opts) {
   events.EventEmitter.call(this);
 
@@ -55,6 +246,7 @@ var Server = function SampServer(opts) {
   this.cfg = null;
   this.rconConnection = null;
   this.commandQueue = [];
+  this.temporary = opts.temporary || false;
 
   if (!useLinuxBinary || reIsWindowsBinary.test(this.binary)) {
     this.windowsBinary = true;
@@ -194,7 +386,15 @@ Server.prototype.touchLog = function(fn) {
   return this;
 };
 
-Server.prototype.stop = function(signal) {
+Server.prototype.stop = function(signal, sync) {
+  if (this.stopping) {
+    return;
+  }
+  
+  var operations = [];
+  var self = this;
+
+  this.stopping = !sync;
   this.starting = false;
   this.started = false;
 
@@ -207,11 +407,33 @@ Server.prototype.stop = function(signal) {
   if (this.child) {
     this.child.kill(signal);
     this.child = null;
-
-    this.emit('stop');
   }
+  
+  if (this.temporary) {
+    if (sync) {
+      try {
+        rimraf.sync(this.cwd);
+      } catch (e) {}
+    } else {
+      operations.push(rimraf.bind(null, this.cwd));
+    }
+  }
+  
+  if (sync) {
+    this.emit('stop');
+  } else {
+    async.series(operations, function() {
+      self.stopping = false;
 
+      self.emit('stop');
+    });
+  }
+  
   return this;
+};
+
+Server.prototype.stopSync = function(signal) {
+  this.stop(signal, true);
 };
 
 Server.prototype.tailLog = function(fn) {
@@ -236,31 +458,6 @@ Server.prototype.tailLog = function(fn) {
   return this;
 };
 
-Server.prototype.getDefaultCfg = function() {
-  return {
-    lanmode: 0,
-    rcon_password: 'changeme',
-    maxplayers: 50,
-    port: 7777,
-    hostname: 'SA-MP 0.3 Server',
-    gamemodes: [],
-    filterscripts: [],
-    announce: 0,
-    query: 1,
-    chatlogging: 0,
-    weburl: 'www.sa-mp.com',
-    onfoot_rate: 40,
-    incar_rate: 40,
-    weapon_rate: 40,
-    stream_distance: 300.0,
-    stream_rate: 1000,
-    maxnpc: 0,
-    logtimeformat: '[%H:%M:%S]',
-    bind: '0.0.0.0',
-    plugins: []
-  };
-};
-
 Server.prototype.readCfg = function(fn) {
   var self = this;
   var file = path.join(this.cwd, 'server.cfg');
@@ -273,7 +470,7 @@ Server.prototype.readCfg = function(fn) {
     data = data.toString().split('\n');
 
     // Start off with the defaults, as that's how the server behaves
-    var cfg = self.getDefaultCfg();
+    var cfg = getDefaultCfg();
 
     for (var i = 0, len = data.length; i < len; i++) {
       var match = data[i].match(reCfgLine);
@@ -293,7 +490,7 @@ Server.prototype.readCfg = function(fn) {
           value = value.split(reSplitSpace);
 
           cfg.gamemodes[n] = {
-            name: path.resolve(self.cwd, value[0]),
+            name: path.resolve(self.cwd, 'gamemodes', value[0]),
             repeat: +value[1] || 1
           };
 
@@ -314,9 +511,14 @@ Server.prototype.readCfg = function(fn) {
       }
     }
 
-    // Resolve the filterscript paths
+    // Resolve filterscript paths
     cfg.filterscripts.forEach(function(val, i, arr) {
-      arr[i] = path.resolve(self.cwd, val);
+      arr[i] = path.resolve(self.cwd, 'filterscripts', val);
+    });
+
+    // Resolve plugin paths
+    cfg.plugins.forEach(function(val, i, arr) {
+      arr[i] = path.resolve(self.cwd, 'plugins', val);
     });
 
     // Clean the gamemodes array from sparse slots
@@ -360,5 +562,7 @@ Server.prototype.flushCommandQueue = function() {
 
 module.exports = {
   Server: Server,
-  closeAll: closeAll
+  closeAll: closeAll,
+  tempServer: tempServer,
+  buildCfg: buildCfg
 };
