@@ -13,7 +13,7 @@ if (!amx) {
   process.exit();
 }
 
-amx = path.resolve(process.cwd, amx);
+amx = path.resolve(process.cwd(), amx);
 
 var serverBinary;
 
