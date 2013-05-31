@@ -391,7 +391,7 @@ Server.prototype.touchLog = function(fn) {
 };
 
 Server.prototype.stop = function(signal, sync) {
-  if (this.stopping) {
+  if (this.stopping || !this.started) {
     return;
   }
 
