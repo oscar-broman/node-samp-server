@@ -13,7 +13,7 @@ if (!amx) {
   process.exit();
 }
 
-amx = path.resolve(amx);
+amx = path.resolve(process.cwd, amx);
 
 var serverBinary;
 
@@ -48,8 +48,8 @@ function shutdown() {
 }
 
 sampServer.tempServer(
-  path.resolve('test', 'server', 'gamemodes', 'test.amx'), {
-    binary: path.resolve('test', 'server', 'samp-server.exe')
+  amx, {
+    binary: serverBinary
   }, function(err, server) {
     if (err) throw err;
 
