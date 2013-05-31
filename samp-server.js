@@ -567,6 +567,7 @@ Server.prototype.flushCommandQueue = function() {
 module.exports = {
   Server: Server,
   closeAll: closeAll,
+  closeAllSync: closeAllSync,
   tempServer: tempServer,
   buildCfg: buildCfg
 };
