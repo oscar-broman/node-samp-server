@@ -114,7 +114,7 @@ function tempServer(amx, opts, fn) {
       fs.mkdir.bind(null, path.join(results.tempDir, 'gamemodes')),
       fs.mkdir.bind(null, path.join(results.tempDir, 'scriptfiles')),
       fs.writeFile.bind(null, amxPath, amxData),
-      fs.writeFile.bind(null, cfgString)
+      fs.writeFile.bind(null, cfgPath, cfgString)
     ];
 
     async.series(operations, function(err) {
