@@ -21,8 +21,7 @@ function shutdown(event) {
 
 sampServer.tempServer(
   path.resolve('test', 'server', 'gamemodes', 'test.amx'), {
-    binary: path.resolve('test', 'server', 'samp-server.exe'),
-    port: 7777
+    binary: path.resolve('test', 'server', 'samp-server.exe')
   }, function(err, server) {
     if (err) throw err;
 

@@ -64,7 +64,7 @@ function tempServer(amx, opts, fn) {
     tempDir: temp.mkdir.bind(null, 'samp-')
   };
 
-  cfg.query = 0;
+  cfg.query = 1;
   cfg.announce = 0;
   cfg.rcon_password = null;
   cfg.port = null;
