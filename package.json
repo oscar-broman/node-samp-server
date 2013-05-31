@@ -12,6 +12,9 @@
     "test": "jshint .",
     "install": "node scripts/install.js"
   },
+  "bin": {
+    "run-amx": "./bin/run-amx.js"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/oscar-broman/node-samp-server.git"
