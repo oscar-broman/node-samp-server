@@ -12,5 +12,7 @@ Might need to do:
 
 ## Usage
 
-`run-amx test.amx`
-`run-samp-server ./samp-server.exe`
+```
+run-amx test.amx
+run-samp-server ./samp-server.exe
+```
