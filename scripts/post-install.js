@@ -9,36 +9,31 @@ var childProcess = require('child_process');
 process.chdir(path.resolve(__dirname, '..'));
 
 var pkg = fs.readFileSync('package.json');
-var deps = 'dependencies_' + process.platform;
 
 pkg = JSON.parse(pkg.toString());
 
-if (pkg[deps]) {
-  for (var m in pkg[deps]) {
-    if (pkg[deps][m]) {
-      pkg.dependencies_all[m] = pkg[deps][m];
-    } else {
-      delete pkg.dependencies_all[m];
-    }
-  }
+var deps;
+
+if (process.platform === 'win32') {
+  deps = pkg.dependencies_win32 || {};
+} else {
+  deps = pkg.dependencies_unix || {};
 }
 
-var deps = [];
-
-for (var m in pkg.dependencies_all) {
-  deps.push(m + '@"' + pkg.dependencies_all[m] + '"');
-}
+var depKeys = Object.keys(deps);
 
 installStep();
 
 function installStep(err) {
   if (err) throw err;
 
-  var dep = deps.pop();
+  var dep = depKeys.pop();
 
   if (!dep) {
     return;
   }
+  
+  dep += '@"' + deps[dep] + '"';
 
   console.log('Installing ' + dep);
 

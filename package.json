@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test": "jshint .",
-    "install": "node scripts/install.js"
+    "postinstall": "node scripts/post-install.js"
   },
   "bin": {
     "run-amx": "./bin/run-amx.js"
@@ -24,20 +24,17 @@
     "cli",
     "server"
   ],
-  "dependencies_all": {
+  "dependencies": {
     "async": ">=0.2.8",
     "funs": ">=0.1.0",
     "xtend": ">=2.0.4",
-    "waitpid": ">=0.1.1",
     "temp": ">=0.5.0",
-    "samp-rcon": ">=0.1.2",
-    "tailnative": ">=0.3.2",
     "rimraf": ">=2.1.4"
   },
-  "dependencies_win32": {
-    "waitpid": null,
-    "samp-rcon": null,
-    "tailnative": null
+  "dependencies_unix": {
+    "waitpid": ">=0.1.1",
+    "samp-rcon": ">=0.1.2",
+    "tailnative": ">=0.3.2"
   },
   "licenses": [
     {
