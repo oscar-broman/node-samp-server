@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "SA-MP server controller",
   "preferGlobal": true,
-  "main": "samp-server.js",
+  "main": "lib/samp-server.js",
   "engines": {
     "node": ">=0.10.0"
   },

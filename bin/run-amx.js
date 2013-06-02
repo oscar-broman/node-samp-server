@@ -3,7 +3,7 @@
 'use strict';
 
 var path = require('path');
-var sampServer = require('../samp-server');
+var sampServer = require('../lib/samp-server');
 
 var amx = process.argv[2];
 
