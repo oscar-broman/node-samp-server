@@ -23,7 +23,7 @@ if (process.platform === 'win32' || process.platform === 'darwin') {
   serverBinary = 'samp03svr';
 }
 
-serverBinary = path.join(__dirname, serverBinary);
+serverBinary = path.join(__dirname, 'server', serverBinary);
 
 var quitting = false;
 
