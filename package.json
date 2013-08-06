@@ -43,5 +43,9 @@
       "type": "MIT +no-false-attribs",
       "url": "https://github.com/oscar-broman/node-samp-server/raw/master/LICENSE"
     }
-  ]
+  ],
+  "readmeFilename": "README.md",
+  "gitHead": "2f84e58c109c26a3d85d1dd2969354ca9bd7092f",
+  "devDependencies": {},
+  "license": "MIT +no-false-attribs"
 }
