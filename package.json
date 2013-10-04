@@ -1,7 +1,7 @@
 {
   "name": "samp-server",
   "author": "Oscar Broman <oscar.broman@gmail.com>",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "SA-MP server controller",
   "preferGlobal": true,
   "main": "lib/samp-server.js",
@@ -35,8 +35,7 @@
   },
   "dependencies_unix": {
     "waitpid": ">=0.1.1",
-    "samp-rcon": ">=0.1.2",
-    "tailnative": ">=0.3.2"
+    "samp-rcon": ">=0.1.2"
   },
   "licenses": [
     {
