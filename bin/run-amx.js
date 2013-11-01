@@ -63,7 +63,7 @@ sampServer.tempServer(
         throw err;
       })
       .on('output', function(data) {
-        console.log(data.trim());
+        console.log(data.replace(/\n$/, ''));
       })
       .on('stop', function() {
         console.log('The server stopped');
