@@ -1,7 +1,7 @@
 {
   "name": "samp-server",
   "author": "Oscar Broman <oscar.broman@gmail.com>",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "SA-MP server controller",
   "preferGlobal": true,
   "main": "lib/samp-server.js",
