@@ -36,7 +36,7 @@
   },
   "dependencies_unix": {
     "waitpid": ">=0.1.1",
-    "samp-rcon": ">=0.1.2"
+    "samp-rcon": ">=0.1.3"
   },
   "licenses": [
     {
