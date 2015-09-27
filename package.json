@@ -1,12 +1,12 @@
 {
   "name": "samp-server",
   "author": "Oscar Broman <oscar.broman@gmail.com>",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "description": "SA-MP server controller",
   "preferGlobal": false,
   "main": "lib/samp-server.js",
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=4.0.0"
   },
   "scripts": {
     "test": "jshint .",
@@ -27,25 +27,15 @@
     "server"
   ],
   "dependencies": {
-    "async": ">=0.2.8",
-    "funs": ">=0.1.0",
-    "xtend": ">=2.0.4",
-    "temp": ">=0.5.0",
-    "rimraf": ">=2.1.4",
-    "pty.js": ">=0.2.3"
+    "async": "1.4.2",
+    "funs": "0.1.0",
+    "pty.js": "0.3.0",
+    "rimraf": "2.4.3",
+    "samp-rcon": "^0.1.3",
+    "temp": "0.8.3",
+    "xtend": "4.0.0"
   },
-  "dependencies_unix": {
-    "waitpid": ">=0.1.1",
-    "samp-rcon": ">=0.1.3"
-  },
-  "licenses": [
-    {
-      "type": "MIT +no-false-attribs",
-      "url": "https://github.com/oscar-broman/node-samp-server/raw/master/LICENSE"
-    }
-  ],
+  "license": "MITNFA",
   "readmeFilename": "README.md",
-  "gitHead": "2f84e58c109c26a3d85d1dd2969354ca9bd7092f",
-  "devDependencies": {},
-  "license": "MIT +no-false-attribs"
+  "gitHead": "2f84e58c109c26a3d85d1dd2969354ca9bd7092f"
 }
